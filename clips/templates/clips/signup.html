@@ -1,0 +1,25 @@
+{% extends "clips/base.html" %}
+
+{% block title %}登録 | valorantランキング{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+  <h1>アカウント登録</h1>
+  <form method="post" class="stack-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+      <label>
+        {{ field.label }}
+        {{ field }}
+        {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+        {% if field.help_text %}<span class="help">{{ field.help_text|safe }}</span>{% endif %}
+      </label>
+    {% endfor %}
+    <button type="submit" class="btn">登録する</button>
+  </form>
+  <p class="hint">すでにアカウントがある場合は <a href="{% url 'clips:login' %}">ログイン</a></p>
+</section>
+{% endblock %}

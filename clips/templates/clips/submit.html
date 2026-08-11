@@ -1,0 +1,27 @@
+{% extends "clips/base.html" %}
+
+{% block title %}投稿 | valorantランキング{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+  <h1>クリップを投稿</h1>
+  <p class="hint">Xの投稿URLを貼るだけです。タイトルや本文は編集できません（元投稿を埋め込み表示します）。</p>
+  <form method="post" class="stack-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <label>
+      {{ form.url.label }}
+      {{ form.url }}
+      {% if form.url.errors %}<span class="field-error">{{ form.url.errors|striptags }}</span>{% endif %}
+    </label>
+    <label class="check-row">
+      {{ form.is_valorant }}
+      <span>{{ form.is_valorant.label }}</span>
+    </label>
+    {% if form.is_valorant.errors %}<span class="field-error">{{ form.is_valorant.errors|striptags }}</span>{% endif %}
+    <button type="submit" class="btn">投稿する</button>
+  </form>
+</section>
+{% endblock %}

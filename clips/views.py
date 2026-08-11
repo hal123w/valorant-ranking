@@ -1,0 +1,184 @@
+from datetime import timedelta
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView, LogoutView
+from django.db.models import Count, F, Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.views.generic import CreateView
+
+from .forms import ClipSubmitForm, EmailAuthenticationForm, ReportForm, SignUpForm
+from .models import Clip, ViewEvent
+from .x_url import embed_html
+
+
+TAB_LABELS = {
+    'latest': '最新',
+    '24h': '24時間',
+    'week': '1週間',
+    'all': '歴代',
+}
+
+
+def _clips_for_tab(tab: str):
+    now = timezone.now()
+    if tab == 'latest':
+        return Clip.objects.all().order_by('-created_at'), 'latest'
+    if tab == '24h':
+        since = now - timedelta(hours=24)
+        qs = (
+            Clip.objects.annotate(
+                period_views=Count(
+                    'view_events',
+                    filter=Q(view_events__created_at__gte=since),
+                )
+            )
+            .order_by('-period_views', '-created_at')
+        )
+        return qs, '24h'
+    if tab == 'week':
+        since = now - timedelta(days=7)
+        qs = (
+            Clip.objects.annotate(
+                period_views=Count(
+                    'view_events',
+                    filter=Q(view_events__created_at__gte=since),
+                )
+            )
+            .order_by('-period_views', '-created_at')
+        )
+        return qs, 'week'
+    return Clip.objects.all().order_by('-view_count', '-created_at'), 'all'
+
+
+def _session_view_map(request) -> dict:
+    raw = request.session.get('clip_views', {})
+    if not isinstance(raw, dict):
+        return {}
+    return {str(k): int(v) for k, v in raw.items() if str(k).isdigit()}
+
+
+def _should_count_view(request, clip_id: int) -> bool:
+    """Same session cannot re-count the same clip within VIEW_DEDUP_SECONDS."""
+    dedup = getattr(settings, 'VIEW_DEDUP_SECONDS', 60)
+    now_ts = int(timezone.now().timestamp())
+    views = _session_view_map(request)
+    key = str(clip_id)
+    last = views.get(key)
+    if last is not None and now_ts - last < dedup:
+        return False
+    views[key] = now_ts
+    if len(views) > 200:
+        cutoff = now_ts - dedup
+        views = {k: v for k, v in views.items() if v >= cutoff}
+    request.session['clip_views'] = views
+    request.session.modified = True
+    return True
+
+
+def feed(request, tab='latest'):
+    if tab not in TAB_LABELS:
+        tab = 'latest'
+    clips, active_tab = _clips_for_tab(tab)
+    return render(request, 'clips/feed.html', {
+        'clips': list(clips[:100]),
+        'active_tab': active_tab,
+        'tabs': TAB_LABELS,
+    })
+
+
+def clip_detail(request, pk):
+    clip = get_object_or_404(Clip, pk=pk)
+    if _should_count_view(request, clip.pk):
+        ViewEvent.objects.create(clip=clip)
+        Clip.objects.filter(pk=clip.pk).update(view_count=F('view_count') + 1)
+        clip.refresh_from_db()
+
+    return render(request, 'clips/detail.html', {
+        'clip': clip,
+        'embed': embed_html(clip.tweet_id),
+        'report_form': ReportForm(),
+        'tabs': TAB_LABELS,
+    })
+
+
+@login_required
+def clip_submit(request):
+    if request.method == 'POST':
+        form = ClipSubmitForm(request.POST)
+        if form.is_valid():
+            tweet_id = form.cleaned_data['tweet_id']
+            clip = Clip.objects.create(
+                url=form.cleaned_data['url'],
+                tweet_id=tweet_id,
+                submitted_by=request.user,
+            )
+            messages.success(request, 'クリップを投稿しました。')
+            return redirect('clips:detail', pk=clip.pk)
+    else:
+        form = ClipSubmitForm()
+    return render(request, 'clips/submit.html', {
+        'form': form,
+        'tabs': TAB_LABELS,
+    })
+
+
+@require_POST
+def clip_report(request, pk):
+    clip = get_object_or_404(Clip, pk=pk)
+    form = ReportForm(request.POST)
+    if form.is_valid():
+        report = form.save(commit=False)
+        report.clip = clip
+        if request.user.is_authenticated:
+            report.reporter = request.user
+        report.save()
+        messages.success(request, '通報を受け付けました。確認のうえ対応します。')
+    else:
+        messages.error(request, '通報に失敗しました。理由を選択してください。')
+    return redirect('clips:detail', pk=clip.pk)
+
+
+def terms(request):
+    return render(request, 'clips/terms.html', {'tabs': TAB_LABELS})
+
+
+def privacy(request):
+    return render(request, 'clips/privacy.html', {'tabs': TAB_LABELS})
+
+
+class SignUpView(CreateView):
+    form_class = SignUpForm
+    template_name = 'clips/signup.html'
+    success_url = reverse_lazy('clips:feed')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        login(self.request, self.object)
+        messages.success(self.request, 'アカウントを作成しました。')
+        return response
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tabs'] = TAB_LABELS
+        return ctx
+
+
+class ClipsLoginView(LoginView):
+    template_name = 'clips/login.html'
+    authentication_form = EmailAuthenticationForm
+    redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tabs'] = TAB_LABELS
+        return ctx
+
+
+class ClipsLogoutView(LogoutView):
+    next_page = reverse_lazy('clips:feed')

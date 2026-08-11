@@ -1,0 +1,33 @@
+{% extends "clips/base.html" %}
+
+{% block title %}{% if active_tab == 'latest' %}最新{% elif active_tab == '24h' %}24時間{% elif active_tab == 'week' %}1週間{% else %}歴代{% endif %} | valorantランキング{% endblock %}
+
+{% block content %}
+<section class="feed">
+  {% if clips %}
+    <ol class="clip-list">
+      {% for clip in clips %}
+        <li class="clip-card">
+          <a class="clip-card-link" href="{% url 'clips:detail' pk=clip.pk %}">
+            <span class="rank">#{{ forloop.counter }}</span>
+            <span class="clip-meta">
+              <span class="clip-id">投稿 {{ clip.tweet_id }}</span>
+              <span class="clip-stats">
+                {% if active_tab == '24h' or active_tab == 'week' %}
+                  期間内 {{ clip.period_views }} 回 · 累計 {{ clip.view_count }} 回
+                {% else %}
+                  {{ clip.view_count }} 回視聴
+                {% endif %}
+              </span>
+            </span>
+            <span class="clip-cta">再生する →</span>
+          </a>
+          <a class="source-link" href="{{ clip.url }}" target="_blank" rel="noopener noreferrer">元の投稿をXで開く</a>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="empty">まだクリップがありません。ログインして投稿してください。</p>
+  {% endif %}
+</section>
+{% endblock %}

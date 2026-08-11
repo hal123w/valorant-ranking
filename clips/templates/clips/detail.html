@@ -1,0 +1,37 @@
+{% extends "clips/base.html" %}
+
+{% block title %}クリップ {{ clip.tweet_id }} | valorantランキング{% endblock %}
+
+{% block extra_head %}
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+{% endblock %}
+
+{% block content %}
+<article class="detail">
+  <header class="detail-header">
+    <p class="detail-stats">{{ clip.view_count }} 回視聴（アプリ内）</p>
+    <a class="source-link" href="{{ clip.url }}" target="_blank" rel="noopener noreferrer">出典: 元のX投稿を開く</a>
+  </header>
+
+  <div class="embed-wrap">
+    {{ embed|safe }}
+  </div>
+
+  <section class="report-box">
+    <h2>通報</h2>
+    <p class="hint">Valorant以外・権利侵害などは通報してください。管理者が確認し削除します。</p>
+    <form method="post" action="{% url 'clips:report' pk=clip.pk %}" class="stack-form">
+      {% csrf_token %}
+      <label>
+        {{ report_form.reason.label }}
+        {{ report_form.reason }}
+      </label>
+      <label>
+        {{ report_form.detail.label }}
+        {{ report_form.detail }}
+      </label>
+      <button type="submit" class="btn btn-secondary">通報する</button>
+    </form>
+  </section>
+</article>
+{% endblock %}
