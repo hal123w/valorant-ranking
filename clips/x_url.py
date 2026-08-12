@@ -47,10 +47,12 @@ def normalize_status_url(url: str) -> str:
     return f'https://x.com/i/status/{tweet_id}'
 
 
-def embed_html(tweet_id: str) -> str:
+def embed_html(tweet_id: str, width: int = 360) -> str:
     """Official X embed blockquote markup (widgets.js loads client-side)."""
     href = f'https://x.com/i/status/{tweet_id}'
+    w = max(250, min(int(width), 550))
     return (
-        f'<blockquote class="twitter-tweet" data-theme="dark" data-dnt="true">'
+        f'<blockquote class="twitter-tweet" data-theme="dark" data-dnt="true" '
+        f'data-width="{w}">'
         f'<a href="{href}"></a></blockquote>'
     )

@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.feed, {'tab': 'latest'}, name='feed'),
     path('ranking/<str:tab>/', views.feed, name='feed_tab'),
     path('clips/<int:pk>/', views.clip_detail, name='detail'),
+    path('clips/<int:pk>/view/', views.clip_view, name='view'),
     path('clips/<int:pk>/report/', views.clip_report, name='report'),
     path('submit/', views.clip_submit, name='submit'),
     path('signup/', views.SignUpView.as_view(), name='signup'),

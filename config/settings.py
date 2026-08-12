@@ -113,6 +113,9 @@ LOGOUT_REDIRECT_URL = 'clips:feed'
 # Anti double-count: seconds before same session can count the same clip again
 VIEW_DEDUP_SECONDS = 60
 
+# Admin Report list only shows reports for clips at/above this count
+REPORT_ADMIN_THRESHOLD = 5
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True

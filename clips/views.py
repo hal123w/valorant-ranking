@@ -6,14 +6,15 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db.models import Count, F, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView
 
 from .forms import ClipSubmitForm, EmailAuthenticationForm, ReportForm, SignUpForm
-from .models import Clip, ViewEvent
+from .models import Clip, Report, ViewEvent
 from .x_url import embed_html
 
 
@@ -81,30 +82,50 @@ def _should_count_view(request, clip_id: int) -> bool:
     return True
 
 
+def _record_view(request, clip: Clip) -> bool:
+    if not _should_count_view(request, clip.pk):
+        return False
+    ViewEvent.objects.create(clip=clip)
+    Clip.objects.filter(pk=clip.pk).update(view_count=F('view_count') + 1)
+    return True
+
+
 def feed(request, tab='latest'):
     if tab not in TAB_LABELS:
         tab = 'latest'
-    clips, active_tab = _clips_for_tab(tab)
+    clips_qs, active_tab = _clips_for_tab(tab)
+    clips = list(clips_qs[:50])
+    report_form = ReportForm()
+    for clip in clips:
+        clip.embed = embed_html(clip.tweet_id, width=350)
     return render(request, 'clips/feed.html', {
-        'clips': list(clips[:100]),
+        'clips': clips,
         'active_tab': active_tab,
         'tabs': TAB_LABELS,
+        'report_form': report_form,
+        'report_reasons': Report.Reason.choices,
+    })
+
+
+@require_POST
+def clip_view(request, pk):
+    """Record an in-app view when a clip becomes visible on the feed."""
+    clip = get_object_or_404(Clip, pk=pk)
+    counted = _record_view(request, clip)
+    clip.refresh_from_db()
+    return JsonResponse({
+        'ok': True,
+        'counted': counted,
+        'view_count': clip.view_count,
     })
 
 
 def clip_detail(request, pk):
+    """Kept for direct links; main UX is feed embeds."""
     clip = get_object_or_404(Clip, pk=pk)
-    if _should_count_view(request, clip.pk):
-        ViewEvent.objects.create(clip=clip)
-        Clip.objects.filter(pk=clip.pk).update(view_count=F('view_count') + 1)
-        clip.refresh_from_db()
-
-    return render(request, 'clips/detail.html', {
-        'clip': clip,
-        'embed': embed_html(clip.tweet_id),
-        'report_form': ReportForm(),
-        'tabs': TAB_LABELS,
-    })
+    _record_view(request, clip)
+    clip.refresh_from_db()
+    return redirect('clips:feed')
 
 
 @login_required
@@ -113,13 +134,13 @@ def clip_submit(request):
         form = ClipSubmitForm(request.POST)
         if form.is_valid():
             tweet_id = form.cleaned_data['tweet_id']
-            clip = Clip.objects.create(
+            Clip.objects.create(
                 url=form.cleaned_data['url'],
                 tweet_id=tweet_id,
                 submitted_by=request.user,
             )
             messages.success(request, 'クリップを投稿しました。')
-            return redirect('clips:detail', pk=clip.pk)
+            return redirect('clips:feed')
     else:
         form = ClipSubmitForm()
     return render(request, 'clips/submit.html', {
@@ -132,6 +153,7 @@ def clip_submit(request):
 def clip_report(request, pk):
     clip = get_object_or_404(Clip, pk=pk)
     form = ReportForm(request.POST)
+    next_url = request.POST.get('next') or reverse('clips:feed')
     if form.is_valid():
         report = form.save(commit=False)
         report.clip = clip
@@ -141,7 +163,7 @@ def clip_report(request, pk):
         messages.success(request, '通報を受け付けました。確認のうえ対応します。')
     else:
         messages.error(request, '通報に失敗しました。理由を選択してください。')
-    return redirect('clips:detail', pk=clip.pk)
+    return redirect(next_url)
 
 
 def terms(request):

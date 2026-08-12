@@ -8,12 +8,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'clips/app.css' %}">
+  <link rel="stylesheet" href="{% static 'clips/app.css' %}?v=8">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="theme-a">
+  <div class="bg-deco" aria-hidden="true">
+    <span class="bg-vert bg-vert-l">DEFY THE LIMITS</span>
+    <span class="bg-vert bg-vert-r">VLRNT</span>
+  </div>
   <header class="site-header">
-    <a class="brand" href="{% url 'clips:feed' %}">valorantランキング</a>
+    <a class="brand" href="{% url 'clips:feed' %}">
+      <span class="brand-valorant">valorant</span>
+      <span class="brand-ranking">ランキング</span>
+    </a>
     <nav class="nav-actions">
       <a class="nav-link" href="{% url 'clips:submit' %}">投稿</a>
       {% if user.is_authenticated %}
@@ -57,5 +64,6 @@
       <a href="{% url 'clips:privacy' %}">プライバシー</a>
     </p>
   </footer>
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

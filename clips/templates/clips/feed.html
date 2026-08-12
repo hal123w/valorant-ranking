@@ -1,28 +1,82 @@
 {% extends "clips/base.html" %}
+{% load static %}
 
 {% block title %}{% if active_tab == 'latest' %}最新{% elif active_tab == '24h' %}24時間{% elif active_tab == 'week' %}1週間{% else %}歴代{% endif %} | valorantランキング{% endblock %}
+
+{% block extra_head %}
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+{% endblock %}
 
 {% block content %}
 <section class="feed">
   {% if clips %}
     <ol class="clip-list">
       {% for clip in clips %}
-        <li class="clip-card">
-          <a class="clip-card-link" href="{% url 'clips:detail' pk=clip.pk %}">
-            <span class="rank">#{{ forloop.counter }}</span>
-            <span class="clip-meta">
-              <span class="clip-id">投稿 {{ clip.tweet_id }}</span>
+        <li class="clip-card" data-clip-id="{{ clip.pk }}" data-view-url="{% url 'clips:view' pk=clip.pk %}">
+          <div class="clip-card-top">
+            <div class="clip-card-heading">
+              {% if active_tab != 'latest' %}
+                <span class="rank">{{ forloop.counter }}</span>
+              {% endif %}
               <span class="clip-stats">
                 {% if active_tab == '24h' or active_tab == 'week' %}
-                  期間内 {{ clip.period_views }} 回 · 累計 {{ clip.view_count }} 回
+                  <span class="stats-label">視聴数</span>
+                  期間 <span class="view-count accent-num">{{ clip.period_views }}</span>
+                  · 累計 <span class="accent-num">{{ clip.view_count }}</span>
                 {% else %}
-                  {{ clip.view_count }} 回視聴
+                  <span class="stats-label">視聴数</span>
+                  <span class="view-count accent-num">{{ clip.view_count }}</span>
                 {% endif %}
               </span>
-            </span>
-            <span class="clip-cta">再生する →</span>
-          </a>
-          <a class="source-link" href="{{ clip.url }}" target="_blank" rel="noopener noreferrer">元の投稿をXで開く</a>
+            </div>
+            <div class="report-menu">
+              <button
+                type="button"
+                class="report-toggle"
+                aria-expanded="false"
+                aria-controls="report-{{ clip.pk }}"
+              >通報</button>
+              <div class="report-panel" id="report-{{ clip.pk }}" hidden>
+                <form method="post" action="{% url 'clips:report' pk=clip.pk %}" class="report-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <label>
+                    理由
+                    <select name="reason" class="input" required>
+                      {% for value, label in report_reasons %}
+                        <option value="{{ value }}">{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                  <label>
+                    詳細（任意）
+                    <input type="text" name="detail" class="input" maxlength="300" placeholder="補足があれば入力">
+                  </label>
+                  <button type="submit" class="btn btn-secondary btn-small">送信</button>
+                </form>
+                <a class="source-link menu-source" href="{{ clip.url }}" target="_blank" rel="noopener noreferrer">元の投稿をXで開く</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-frame" aria-hidden="false">
+            <span class="hud-seg hud-seg-t-l"></span>
+            <span class="hud-seg hud-seg-t-r"></span>
+            <span class="hud-seg hud-seg-b-l"></span>
+            <span class="hud-seg hud-seg-b-r"></span>
+            <span class="hud-seg hud-seg-l-t"></span>
+            <span class="hud-seg hud-seg-l-b"></span>
+            <span class="hud-seg hud-seg-r-t"></span>
+            <span class="hud-seg hud-seg-r-b"></span>
+            <span class="hud-corner hud-corner-tl"></span>
+            <span class="hud-corner hud-corner-tr"></span>
+            <span class="hud-corner hud-corner-bl"></span>
+            <span class="hud-corner hud-corner-br"></span>
+            <div class="embed-wrap">
+              <button type="button" class="embed-click-catcher" aria-label="視聴を記録して再生"></button>
+              {{ clip.embed|safe }}
+            </div>
+          </div>
         </li>
       {% endfor %}
     </ol>
@@ -30,4 +84,8 @@
     <p class="empty">まだクリップがありません。ログインして投稿してください。</p>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'clips/feed.js' %}?v=6"></script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -37,7 +38,9 @@ class ClipAppTests(TestCase):
     def test_feed_public(self):
         res = self.client.get(reverse('clips:feed'))
         self.assertEqual(res.status_code, 200)
-        self.assertContains(res, 'valorantランキング')
+        self.assertContains(res, 'valorant')
+        self.assertContains(res, 'ランキング')
+        self.assertContains(res, 'brand-valorant')
 
     def test_submit_requires_login(self):
         res = self.client.get(reverse('clips:submit'))
@@ -54,7 +57,7 @@ class ClipAppTests(TestCase):
         self.assertEqual(Clip.objects.count(), 1)
         clip = Clip.objects.get()
         self.assertEqual(clip.tweet_id, '555666777888')
-        self.assertRedirects(res, reverse('clips:detail', kwargs={'pk': clip.pk}))
+        self.assertRedirects(res, reverse('clips:feed'))
 
         res2 = self.client.post(reverse('clips:submit'), {
             'url': 'https://twitter.com/other/status/555666777888',
@@ -70,17 +73,49 @@ class ClipAppTests(TestCase):
             tweet_id='1',
             submitted_by=self.user,
         )
-        detail = reverse('clips:detail', kwargs={'pk': clip.pk})
-        res1 = self.client.get(detail)
+        view_url = reverse('clips:view', kwargs={'pk': clip.pk})
+        res1 = self.client.post(view_url)
         self.assertEqual(res1.status_code, 200)
         clip.refresh_from_db()
         self.assertEqual(clip.view_count, 1)
         self.assertEqual(ViewEvent.objects.filter(clip=clip).count(), 1)
 
-        res2 = self.client.get(detail)
+        res2 = self.client.post(view_url)
         self.assertEqual(res2.status_code, 200)
+        data = res2.json()
+        self.assertFalse(data['counted'])
         clip.refresh_from_db()
         self.assertEqual(clip.view_count, 1)
+
+    def test_feed_shows_embed_markup(self):
+        Clip.objects.create(url='https://x.com/i/status/99', tweet_id='99')
+        res = self.client.get(reverse('clips:feed'))
+        self.assertContains(res, 'twitter-tweet')
+        self.assertContains(res, 'report-toggle')
+        self.assertContains(res, '通報')
+        self.assertContains(res, 'embed-click-catcher')
+        self.assertNotContains(res, '再生する')
+        self.assertNotContains(res, '#1')
+
+    def test_rank_shown_on_all_tab(self):
+        Clip.objects.create(url='https://x.com/i/status/98', tweet_id='98')
+        res = self.client.get(reverse('clips:feed_tab', kwargs={'tab': 'all'}))
+        self.assertContains(res, 'class="rank"')
+        self.assertContains(res, '>1<')
+        self.assertNotContains(res, '#1')
+
+    def test_feed_does_not_auto_count_views(self):
+        clip = Clip.objects.create(url='https://x.com/i/status/77', tweet_id='77')
+        self.client.get(reverse('clips:feed'))
+        clip.refresh_from_db()
+        self.assertEqual(clip.view_count, 0)
+        self.assertEqual(ViewEvent.objects.filter(clip=clip).count(), 0)
+
+    def test_hud_frame_present(self):
+        Clip.objects.create(url='https://x.com/i/status/88', tweet_id='88')
+        res = self.client.get(reverse('clips:feed'))
+        self.assertContains(res, 'hud-frame')
+        self.assertContains(res, 'theme-a')
 
     def test_tabs_order_all_time(self):
         c1 = Clip.objects.create(url='https://x.com/i/status/10', tweet_id='10', view_count=5)
@@ -110,8 +145,9 @@ class ClipAppTests(TestCase):
         res = self.client.post(reverse('clips:report', kwargs={'pk': clip.pk}), {
             'reason': Report.Reason.NOT_VALORANT,
             'detail': 'apex',
+            'next': reverse('clips:feed'),
         })
-        self.assertRedirects(res, reverse('clips:detail', kwargs={'pk': clip.pk}))
+        self.assertRedirects(res, reverse('clips:feed'))
         self.assertEqual(Report.objects.count(), 1)
         self.assertEqual(Report.objects.get().detail, 'apex')
 
@@ -123,3 +159,37 @@ class ClipAppTests(TestCase):
         })
         self.assertEqual(res.status_code, 302)
         self.assertTrue(User.objects.filter(username='new@example.com').exists())
+
+
+class ReportAdminThresholdTests(TestCase):
+    def setUp(self):
+        self.clip = Clip.objects.create(url='https://x.com/i/status/60', tweet_id='60')
+
+    def _add_reports(self, n):
+        for i in range(n):
+            Report.objects.create(
+                clip=self.clip,
+                reason=Report.Reason.OTHER,
+                detail=f'r{i}',
+            )
+
+    def test_report_admin_hides_below_threshold(self):
+        from clips.admin import ReportAdmin
+
+        self._add_reports(4)
+        ma = ReportAdmin(Report, admin.site)
+        qs = ma.get_queryset(request=None)
+        self.assertEqual(qs.count(), 0)
+
+    def test_report_admin_shows_at_threshold(self):
+        from clips.admin import ReportAdmin
+
+        self._add_reports(5)
+        ma = ReportAdmin(Report, admin.site)
+        qs = ma.get_queryset(request=None)
+        self.assertEqual(qs.count(), 5)
+        self.assertTrue(all(r.clip_id == self.clip.pk for r in qs))
+
+    def test_reports_still_saved_below_threshold(self):
+        self._add_reports(3)
+        self.assertEqual(Report.objects.filter(clip=self.clip).count(), 3)
