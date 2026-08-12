@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView
 
-from .forms import ClipSubmitForm, EmailAuthenticationForm, ReportForm, SignUpForm
+from .forms import ClipSubmitForm, ReportForm, SignUpForm, UsernameAuthenticationForm
 from .models import Clip, Report, ViewEvent
 from .x_url import embed_html
 
@@ -193,7 +193,7 @@ class SignUpView(CreateView):
 
 class ClipsLoginView(LoginView):
     template_name = 'clips/login.html'
-    authentication_form = EmailAuthenticationForm
+    authentication_form = UsernameAuthenticationForm
     redirect_authenticated_user = True
 
     def get_context_data(self, **kwargs):

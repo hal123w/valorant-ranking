@@ -7,15 +7,15 @@ from .models import Clip, Report
 from .x_url import extract_tweet_id, normalize_status_url
 
 
-class EmailAuthenticationForm(AuthenticationForm):
-    """Login with email (stored as username)."""
+class UsernameAuthenticationForm(AuthenticationForm):
+    """Login with username (case-insensitive lookup)."""
 
-    username = forms.EmailField(
-        label='メールアドレス',
-        widget=forms.EmailInput(attrs={
+    username = forms.CharField(
+        label='ユーザー名',
+        widget=forms.TextInput(attrs={
             'class': 'input',
-            'placeholder': 'you@example.com',
-            'autocomplete': 'email',
+            'placeholder': 'ユーザー名',
+            'autocomplete': 'username',
         }),
     )
     password = forms.CharField(
@@ -28,23 +28,28 @@ class EmailAuthenticationForm(AuthenticationForm):
         }),
     )
 
+    def clean_username(self):
+        username = self.cleaned_data['username'].strip()
+        matched = User.objects.filter(username__iexact=username).first()
+        if matched:
+            return matched.username
+        return username
+
 
 class SignUpForm(UserCreationForm):
-    email = forms.EmailField(
-        label='メールアドレス',
-        widget=forms.EmailInput(attrs={
-            'class': 'input',
-            'placeholder': 'you@example.com',
-            'autocomplete': 'email',
-        }),
-    )
-
     class Meta:
         model = User
-        fields = ('email',)
+        fields = ('username',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['username'].label = 'ユーザー名'
+        self.fields['username'].help_text = ''
+        self.fields['username'].widget.attrs.update({
+            'class': 'input',
+            'placeholder': 'ユーザー名',
+            'autocomplete': 'username',
+        })
         self.fields['password1'].widget.attrs.update({
             'class': 'input',
             'placeholder': 'パスワード',
@@ -58,22 +63,13 @@ class SignUpForm(UserCreationForm):
         self.fields['password1'].label = 'パスワード'
         self.fields['password2'].label = 'パスワード（確認）'
 
-    def clean_email(self):
-        email = self.cleaned_data['email'].strip().lower()
-        if User.objects.filter(username__iexact=email).exists():
-            raise ValidationError('このメールアドレスは既に登録されています。')
-        if User.objects.filter(email__iexact=email).exists():
-            raise ValidationError('このメールアドレスは既に登録されています。')
-        return email
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        email = self.cleaned_data['email']
-        user.username = email
-        user.email = email
-        if commit:
-            user.save()
-        return user
+    def clean_username(self):
+        username = self.cleaned_data['username'].strip()
+        if not username:
+            raise ValidationError('ユーザー名を入力してください。')
+        if User.objects.filter(username__iexact=username).exists():
+            raise ValidationError('このユーザー名は既に使われています。')
+        return username
 
 
 class ClipSubmitForm(forms.Form):

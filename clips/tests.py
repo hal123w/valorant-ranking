@@ -30,8 +30,7 @@ class ClipAppTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
-            username='user@example.com',
-            email='user@example.com',
+            username='testuser',
             password='testpass123',
         )
 
@@ -48,7 +47,7 @@ class ClipAppTests(TestCase):
         self.assertIn('/login/', res.url)
 
     def test_submit_and_reject_duplicate(self):
-        self.client.login(username='user@example.com', password='testpass123')
+        self.client.login(username='testuser', password='testpass123')
         url = 'https://x.com/player/status/555666777888'
         res = self.client.post(reverse('clips:submit'), {
             'url': url,
@@ -151,14 +150,33 @@ class ClipAppTests(TestCase):
         self.assertEqual(Report.objects.count(), 1)
         self.assertEqual(Report.objects.get().detail, 'apex')
 
-    def test_signup_with_email(self):
+    def test_signup_with_username(self):
         res = self.client.post(reverse('clips:signup'), {
-            'email': 'new@example.com',
+            'username': 'newbie',
             'password1': 'complex-pass-99',
             'password2': 'complex-pass-99',
         })
         self.assertEqual(res.status_code, 302)
-        self.assertTrue(User.objects.filter(username='new@example.com').exists())
+        self.assertTrue(User.objects.filter(username='newbie').exists())
+
+    def test_signup_rejects_case_insensitive_duplicate(self):
+        User.objects.create_user(username='TakenName', password='complex-pass-99')
+        res = self.client.post(reverse('clips:signup'), {
+            'username': 'takenname',
+            'password1': 'complex-pass-99',
+            'password2': 'complex-pass-99',
+        })
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, '既に使われています')
+        self.assertEqual(User.objects.filter(username__iexact='takenname').count(), 1)
+
+    def test_login_case_insensitive(self):
+        User.objects.create_user(username='CoolPlayer', password='complex-pass-99')
+        res = self.client.post(reverse('clips:login'), {
+            'username': 'coolplayer',
+            'password': 'complex-pass-99',
+        })
+        self.assertEqual(res.status_code, 302)
 
 
 class ReportAdminThresholdTests(TestCase):
