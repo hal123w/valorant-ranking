@@ -81,7 +81,7 @@ class ClipSubmitForm(forms.Form):
         }),
     )
     is_valorant = forms.BooleanField(
-        label='この投稿は Valorant のプレイ映像です（目視運用・同意必須）',
+        label='この投稿は Valorant のプレイ映像です（同意必須）',
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'checkbox'}),
     )

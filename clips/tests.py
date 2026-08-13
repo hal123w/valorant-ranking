@@ -46,6 +46,16 @@ class ClipAppTests(TestCase):
         self.assertEqual(res.status_code, 302)
         self.assertIn('/login/', res.url)
 
+    def test_submit_consent_label(self):
+        self.client.login(username='testuser', password='testpass123')
+        res = self.client.get(reverse('clips:submit'))
+        self.assertContains(res, '同意必須')
+        self.assertNotContains(res, '目視運用')
+
+    def test_sticky_chrome_markup(self):
+        res = self.client.get(reverse('clips:feed'))
+        self.assertContains(res, 'class="site-chrome"')
+
     def test_submit_and_reject_duplicate(self):
         self.client.login(username='testuser', password='testpass123')
         url = 'https://x.com/player/status/555666777888'

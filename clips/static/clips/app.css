@@ -23,7 +23,6 @@ html, body {
   margin: 0;
   min-height: 100%;
   max-width: 100%;
-  overflow-x: hidden;
   color: var(--text);
   font-family: var(--font);
   line-height: 1.5;
@@ -78,13 +77,17 @@ body.theme-a {
   color: rgba(232, 238, 247, 0.12);
 }
 
-.site-header,
-.tabs,
 .messages,
 .main,
 .site-footer {
   position: relative;
   z-index: 1;
+}
+
+.site-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 a {
@@ -105,9 +108,6 @@ a:hover {
   border-bottom: 1px solid rgba(255, 70, 85, 0.22);
   background: rgba(10, 14, 22, 0.92);
   backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 20;
   min-height: 52px;
   box-sizing: border-box;
 }
@@ -245,9 +245,6 @@ a:hover {
   border-bottom: 1px solid rgba(255, 70, 85, 0.2);
   background: rgba(10, 14, 22, 0.94);
   backdrop-filter: blur(10px);
-  position: sticky;
-  top: 52px;
-  z-index: 19;
 }
 
 .tab {
@@ -282,10 +279,6 @@ a:hover {
   .site-header {
     min-height: 48px;
     padding: 0.55rem 0.75rem;
-  }
-
-  .tabs {
-    top: 48px;
   }
 
   .brand-valorant,
