@@ -12,8 +12,12 @@
   <meta property="og:title" content="{% block og_title %}valorantランキング{% endblock %}">
   <meta property="og:description" content="{% block og_description %}ValorantのX（Twitter）クリップを視聴回数でランキング。URL投稿で参加できる非公式ファンサイトです。{% endblock %}">
   <meta property="og:url" content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
-  {% block og_image %}{# 後から <meta property="og:image" content="..."> を追加 #}{% endblock %}
-  <meta name="twitter:card" content="summary">
+  {% block og_image %}
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'clips/og.png' %}">
+  {% endblock %}
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="{% static 'clips/favicon.png' %}" type="image/png">
+  <link rel="apple-touch-icon" href="{% static 'clips/favicon.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">

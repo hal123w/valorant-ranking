@@ -186,6 +186,10 @@ class ClipAppTests(TestCase):
         self.assertContains(res, 'property="og:description"', html=False)
         self.assertContains(res, 'property="og:type"', html=False)
         self.assertContains(res, 'property="og:url"', html=False)
+        self.assertContains(res, 'property="og:image"', html=False)
+        self.assertContains(res, 'rel="icon"', html=False)
+        self.assertContains(res, 'clips/favicon.png', html=False)
+        self.assertContains(res, 'clips/og.png', html=False)
 
     def test_robots_txt(self):
         res = self.client.get(reverse('clips:robots'))
