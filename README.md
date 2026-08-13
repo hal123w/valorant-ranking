@@ -37,6 +37,7 @@ python manage.py test
 - 通報（ログイン不要）。削除は Django admin（superuser）
 - admin の通報一覧は、同一クリップの通報が **5件以上** のときだけ表示（未満はDB保存のみ）
 - 利用規約・プライバシー（簡易）
+- SEO土台: meta description / OGP、`/robots.txt`、`/sitemap.xml`
 
 ## GitHub リポジトリ作成〜push
 

@@ -178,6 +178,36 @@ class ClipAppTests(TestCase):
         })
         self.assertEqual(res.status_code, 302)
 
+    def test_seo_meta_on_feed(self):
+        res = self.client.get(reverse('clips:feed'))
+        self.assertContains(res, 'name="description"', html=False)
+        self.assertContains(res, 'ValorantのX（Twitter）クリップを視聴回数でランキング', html=False)
+        self.assertContains(res, 'property="og:title"', html=False)
+        self.assertContains(res, 'property="og:description"', html=False)
+        self.assertContains(res, 'property="og:type"', html=False)
+        self.assertContains(res, 'property="og:url"', html=False)
+
+    def test_robots_txt(self):
+        res = self.client.get(reverse('clips:robots'))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'text/plain; charset=utf-8')
+        self.assertIn(b'User-agent: *', res.content)
+        self.assertIn(b'Disallow: /admin/', res.content)
+        self.assertIn(b'Sitemap:', res.content)
+        self.assertIn(b'sitemap.xml', res.content)
+
+    def test_sitemap_xml(self):
+        res = self.client.get(reverse('clips:sitemap'))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('xml', res['Content-Type'])
+        body = res.content.decode('utf-8')
+        self.assertIn('<urlset', body)
+        self.assertIn('/ranking/24h/', body)
+        self.assertIn('/ranking/week/', body)
+        self.assertIn('/ranking/all/', body)
+        self.assertIn('/terms/', body)
+        self.assertIn('/privacy/', body)
+
 
 class ReportAdminThresholdTests(TestCase):
     def setUp(self):

@@ -6,11 +6,11 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db.models import Count, F, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import CreateView
 
 from .forms import ClipSubmitForm, ReportForm, SignUpForm, UsernameAuthenticationForm
@@ -172,6 +172,42 @@ def terms(request):
 
 def privacy(request):
     return render(request, 'clips/privacy.html', {'tabs': TAB_LABELS})
+
+
+@require_GET
+def robots_txt(request):
+    sitemap_url = request.build_absolute_uri(reverse('clips:sitemap'))
+    body = '\n'.join([
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin/',
+        f'Sitemap: {sitemap_url}',
+        '',
+    ])
+    return HttpResponse(body, content_type='text/plain; charset=utf-8')
+
+
+@require_GET
+def sitemap_xml(request):
+    paths = [
+        reverse('clips:feed'),
+        reverse('clips:feed_tab', kwargs={'tab': '24h'}),
+        reverse('clips:feed_tab', kwargs={'tab': 'week'}),
+        reverse('clips:feed_tab', kwargs={'tab': 'all'}),
+        reverse('clips:terms'),
+        reverse('clips:privacy'),
+    ]
+    urls_xml = []
+    for path in paths:
+        loc = request.build_absolute_uri(path)
+        urls_xml.append(f'  <url>\n    <loc>{loc}</loc>\n  </url>')
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + '\n'.join(urls_xml)
+        + '\n</urlset>\n'
+    )
+    return HttpResponse(body, content_type='application/xml; charset=utf-8')
 
 
 class SignUpView(CreateView):
