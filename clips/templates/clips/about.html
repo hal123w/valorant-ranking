@@ -1,0 +1,16 @@
+{% extends "clips/base.html" %}
+
+{% block title %}運営 | valorantランキング{% endblock %}
+
+{% block content %}
+<article class="legal">
+  <h1>運営について</h1>
+  <p>valorantランキングは、個人開発の非公式ファン向けサイトです。Riot Games および関係者による後援・承認はありません。</p>
+  <ul>
+    <li>Valorant の X（Twitter）クリップを、アプリ内の視聴回数でランキングします。</li>
+    <li>表示は X の公式埋め込みのみです。動画ファイルの再ホスト・再配布は行いません。</li>
+    <li>権利は各投稿者・権利者に帰属します。削除依頼には対応します。</li>
+  </ul>
+  <p>お問い合わせは <a href="{% url 'clips:contact' %}">問い合わせ</a> からどうぞ。</p>
+</article>
+{% endblock %}

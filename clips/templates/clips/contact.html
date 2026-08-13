@@ -1,0 +1,12 @@
+{% extends "clips/base.html" %}
+
+{% block title %}問い合わせ | valorantランキング{% endblock %}
+
+{% block content %}
+<article class="legal">
+  <h1>問い合わせ・削除依頼</h1>
+  <p>運営への連絡、権利者・投稿者からの削除依頼は、次のメールへご連絡ください。確認のうえ、速やかに対応します。</p>
+  <p><a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>
+  <p>削除依頼の際は、対象の URL またはクリップの特定に必要な情報と、ご自身の立場（投稿者・権利者など）を書いていただけると対応が早くなります。</p>
+</article>
+{% endblock %}

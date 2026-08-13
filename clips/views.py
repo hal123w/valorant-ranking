@@ -166,12 +166,31 @@ def clip_report(request, pk):
     return redirect(next_url)
 
 
+CONTACT_EMAIL = 'heart.appdev@gmail.com'
+
+
+def _legal_context():
+    return {'tabs': TAB_LABELS, 'contact_email': CONTACT_EMAIL}
+
+
+def about(request):
+    return render(request, 'clips/about.html', _legal_context())
+
+
+def guide(request):
+    return render(request, 'clips/guide.html', _legal_context())
+
+
+def contact(request):
+    return render(request, 'clips/contact.html', _legal_context())
+
+
 def terms(request):
-    return render(request, 'clips/terms.html', {'tabs': TAB_LABELS})
+    return render(request, 'clips/terms.html', _legal_context())
 
 
 def privacy(request):
-    return render(request, 'clips/privacy.html', {'tabs': TAB_LABELS})
+    return render(request, 'clips/privacy.html', _legal_context())
 
 
 @require_GET
@@ -194,6 +213,9 @@ def sitemap_xml(request):
         reverse('clips:feed_tab', kwargs={'tab': '24h'}),
         reverse('clips:feed_tab', kwargs={'tab': 'week'}),
         reverse('clips:feed_tab', kwargs={'tab': 'all'}),
+        reverse('clips:about'),
+        reverse('clips:guide'),
+        reverse('clips:contact'),
         reverse('clips:terms'),
         reverse('clips:privacy'),
     ]

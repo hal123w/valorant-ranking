@@ -200,6 +200,24 @@ class ClipAppTests(TestCase):
         self.assertContains(res, 'rel="icon"', html=False)
         self.assertContains(res, 'clips/favicon.png', html=False)
         self.assertContains(res, 'clips/og.png', html=False)
+        self.assertContains(res, '非公式')
+        self.assertNotContains(res, 'DEFY THE LIMITS')
+        self.assertNotContains(res, 'VLRNT')
+
+    def test_legal_pages(self):
+        for name in ('about', 'guide', 'contact', 'terms', 'privacy'):
+            res = self.client.get(reverse(f'clips:{name}'))
+            self.assertEqual(res.status_code, 200)
+        contact = self.client.get(reverse('clips:contact'))
+        self.assertContains(contact, 'heart.appdev@gmail.com')
+        about = self.client.get(reverse('clips:about'))
+        self.assertContains(about, '個人開発')
+        guide = self.client.get(reverse('clips:guide'))
+        self.assertContains(guide, 'ユーザー名')
+        privacy = self.client.get(reverse('clips:privacy'))
+        self.assertContains(privacy, 'Cookie')
+        terms = self.client.get(reverse('clips:terms'))
+        self.assertContains(terms, 'heart.appdev@gmail.com')
 
     def test_robots_txt(self):
         res = self.client.get(reverse('clips:robots'))
@@ -219,6 +237,9 @@ class ClipAppTests(TestCase):
         self.assertIn('/ranking/24h/', body)
         self.assertIn('/ranking/week/', body)
         self.assertIn('/ranking/all/', body)
+        self.assertIn('/about/', body)
+        self.assertIn('/guide/', body)
+        self.assertIn('/contact/', body)
         self.assertIn('/terms/', body)
         self.assertIn('/privacy/', body)
 
